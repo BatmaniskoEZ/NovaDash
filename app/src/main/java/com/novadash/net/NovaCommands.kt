@@ -3,10 +3,8 @@ package com.novadash.net
 /**
  * Novatek Wi-Fi API command IDs used by this app.
  *
- * Source of truth is the reverse-engineered documentation in the repo root
- * (nt-web-api-commands.txt, nt96658_webapi_commands.txt) and the firmware notes in
- * memory/MEMORY.md. Only the commands this app actually issues are listed here; the
- * full table lives in the docs.
+ * Worked out by watching the stock app's Wi-Fi traffic and confirmed against a real camera.
+ * Only the commands this app actually issues are listed here.
  *
  * Every command is issued as:  http://192.168.1.254/?custom=1&cmd=<id>[&par=..][&str=..]
  */
@@ -19,6 +17,7 @@ object NovaCommands {
     const val MOVIE_SNAPSHOT = 2017        // snapshot while recording (stock app getIMAGE, custom=1
                                            // &cmd=2017, no par) — the working capture on this camera
     const val MOVIE_RECORD = 2001          // par=1 start, par=0 stop
+    const val MAX_RECORD_TIME = 2009       // remaining record time in seconds at current bitrate (<Value>)
     const val MOVIE_SIZE = 2002            // record resolution (par = index from 3030); wrap in LIVEVIEW 0/1
     const val MOVIE_LOOP = 2003            // loop interval INDEX (par: 0=1min, 1=3min, 2=5min)
     const val MOVIE_HDR = 2004             // WDR/HDR on/off (par=1/0); wrap in LIVEVIEW 0/1

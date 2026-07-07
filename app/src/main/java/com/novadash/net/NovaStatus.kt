@@ -4,7 +4,7 @@ package com.novadash.net
  * Status/error codes returned in the `<Status>` element of a Novatek response, plus the
  * asynchronous notification codes pushed over the :8192 socket.
  *
- * Values mirror webapi-error-codes.txt in the repo root. Positive codes are usually events
+ * Positive codes are usually events
  * (record started, card inserted, ...); negative codes are failures; 0 is OK.
  */
 object NovaStatus {

@@ -94,6 +94,25 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         // --- Persistence & storage ---
         SectionCard("Storage") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        state.recordSeconds?.let { "~${formatDuration(it)} of recording left" }
+                            ?: "Recording time left: …",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "SD card free: " + (state.freeBytes?.let { formatBytes(it) } ?: "…"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
+                OutlinedButton(onClick = viewModel::loadStorage) { Text("Refresh") }
+            }
             OutlinedButton(onClick = viewModel::saveSettings, modifier = Modifier.fillMaxWidth()) {
                 Text("Save settings to camera")
             }
@@ -263,6 +282,19 @@ private fun CustomCommandInput(onSend: (Int, Int?, String?) -> Unit) {
         enabled = cmd.isNotBlank(),
         modifier = Modifier.fillMaxWidth(),
     ) { Text("Send command") }
+}
+
+/** Bytes → a short human size (decimal, matching SD-card labelling): "83.6 GB", "512 MB". */
+private fun formatBytes(bytes: Long): String {
+    val gb = bytes / 1_000_000_000.0
+    return if (gb >= 1) "%.1f GB".format(gb) else "%.0f MB".format(bytes / 1_000_000.0)
+}
+
+/** Seconds → "5h 34m" / "42m". */
+private fun formatDuration(seconds: Long): String {
+    val h = seconds / 3600
+    val m = (seconds % 3600) / 60
+    return if (h > 0) "${h}h ${m}m" else "${m}m"
 }
 
 @Composable

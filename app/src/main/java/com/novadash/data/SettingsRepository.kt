@@ -41,7 +41,7 @@ data class ProbeResult(val cmd: Int, val status: Int?, val message: String)
  * Camera settings operations: Wi-Fi credentials, audio/voice controls, persistence, format,
  * and the experimental undocumented-command probes for silencing voice prompts.
  *
- * The voice/beep story (see memory/MEMORY.md): FL_BEEP isn't exposed by any single command,
+ * The voice/beep story: FL_BEEP isn't exposed by any single command,
  * so [muteVoice] turns off the reachable levers — clip audio (2007) and beep volume (2505) —
  * and [probe] lets the user try the undocumented dispatch-table commands one by one.
  */
@@ -54,6 +54,18 @@ class SettingsRepository @Inject constructor(
             WifiCredentials(r.value.ssid.orEmpty(), r.value.passphrase.orEmpty()),
         )
         is NovaResult.Err -> r
+    }
+
+    /** Free space on the SD card in bytes (cmd 3017), or null if unavailable. */
+    suspend fun freeSpaceBytes(): Long? = when (val r = client.command(NovaCommands.FREE_SPACE)) {
+        is NovaResult.Ok -> r.value.value?.trim()?.toLongOrNull()
+        is NovaResult.Err -> null
+    }
+
+    /** Remaining recording time in seconds at the current bitrate (cmd 2009), or null. */
+    suspend fun maxRecordSeconds(): Long? = when (val r = client.command(NovaCommands.MAX_RECORD_TIME)) {
+        is NovaResult.Ok -> r.value.value?.trim()?.toLongOrNull()
+        is NovaResult.Err -> null
     }
 
     /** Load recording resolution options (3030) plus current values (3014). */

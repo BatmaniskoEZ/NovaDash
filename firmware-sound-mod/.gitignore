@@ -1,0 +1,7 @@
+# Never publish the camera's proprietary firmware or copyrighted audio clips
+*.bin
+*.raw
+cardv.*
+*.wav
+*.mp3
+*.flac

@@ -12,12 +12,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
     val wifi: WifiCredentials? = null,
     val recording: RecordingSettings? = null,
+    val freeBytes: Long? = null,
+    val recordSeconds: Long? = null,
     val probes: List<ProbeResult> = emptyList(),
     val message: String? = null,
 )
@@ -27,6 +30,8 @@ class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
 ) : ViewModel() {
 
+    // These loads run in parallel and all write to _state, so every write MUST be an atomic
+    // update {} (not `_state.value = _state.value.copy`) or one load clobbers another's field.
     private val _state = MutableStateFlow(SettingsUiState())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
@@ -35,13 +40,22 @@ class SettingsViewModel @Inject constructor(
     init {
         loadWifi()
         loadRecording()
+        loadStorage()
+    }
+
+    fun loadStorage() {
+        viewModelScope.launch {
+            val free = repository.freeSpaceBytes()
+            val secs = repository.maxRecordSeconds()
+            _state.update { it.copy(freeBytes = free, recordSeconds = secs) }
+        }
     }
 
     private fun loadWifi() {
         viewModelScope.launch {
             when (val r = repository.wifi()) {
-                is NovaResult.Ok -> _state.value = _state.value.copy(wifi = r.value)
-                is NovaResult.Err -> _state.value = _state.value.copy(message = r.message)
+                is NovaResult.Ok -> _state.update { it.copy(wifi = r.value) }
+                is NovaResult.Err -> _state.update { it.copy(message = r.message) }
             }
         }
     }
@@ -49,8 +63,8 @@ class SettingsViewModel @Inject constructor(
     private fun loadRecording() {
         viewModelScope.launch {
             when (val r = repository.recording()) {
-                is NovaResult.Ok -> _state.value = _state.value.copy(recording = r.value)
-                is NovaResult.Err -> _state.value = _state.value.copy(message = r.message)
+                is NovaResult.Ok -> _state.update { it.copy(recording = r.value) }
+                is NovaResult.Err -> _state.update { it.copy(message = r.message) }
             }
         }
     }
@@ -77,7 +91,7 @@ class SettingsViewModel @Inject constructor(
     fun probe(cmd: Int) {
         viewModelScope.launch {
             val result = repository.probe(cmd)
-            _state.value = _state.value.copy(probes = _state.value.probes + result)
+            _state.update { it.copy(probes = it.probes + result) }
         }
     }
 
@@ -85,12 +99,12 @@ class SettingsViewModel @Inject constructor(
     fun sendCustom(cmd: Int, par: Int?, str: String?) {
         viewModelScope.launch {
             val result = repository.probe(cmd, par, str?.takeIf { it.isNotBlank() })
-            _state.value = _state.value.copy(probes = _state.value.probes + result)
+            _state.update { it.copy(probes = it.probes + result) }
         }
     }
 
     fun clearMessage() {
-        _state.value = _state.value.copy(message = null)
+        _state.update { it.copy(message = null) }
     }
 
     /**
@@ -101,13 +115,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val err = block()
             if (err != null) {
-                _state.value = _state.value.copy(message = err)
+                _state.update { it.copy(message = err) }
             } else if (successMessage != null) {
-                _state.value = _state.value.copy(message = successMessage)
+                _state.update { it.copy(message = successMessage) }
             }
             // Refresh recording state from the camera after any change.
             when (val r = repository.recording()) {
-                is NovaResult.Ok -> _state.value = _state.value.copy(recording = r.value)
+                is NovaResult.Ok -> _state.update { it.copy(recording = r.value) }
                 is NovaResult.Err -> Unit
             }
         }
