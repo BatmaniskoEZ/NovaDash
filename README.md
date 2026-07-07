@@ -7,6 +7,27 @@ telemetry, no dead multi-chipset code — just local control over the camera's W
 Built with Kotlin + Jetpack Compose (Material 3), Hilt, libVLC (RTSP live view), media3
 (local playback), and the Android Auto Car App Library.
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/connect.jpg"          width="180">
+  <img src="screenshots/live.jpg"             width="180">
+  <img src="screenshots/files.jpg"            width="180">
+  <img src="screenshots/moments.jpg"          width="180">
+  <img src="screenshots/markers.jpg"          width="180">
+  <img src="screenshots/settings.jpg"         width="180">
+  <img src="screenshots/settings-storage.jpg" width="180">
+  <img src="screenshots/advanced.jpg"         width="180">
+</p>
+
+**Android Auto** — flag a moment while driving, review saved moments, manage tags:
+
+<p align="center">
+  <img src="screenshots/aa-save-moment.jpg"   width="270">
+  <img src="screenshots/aa-saved-moments.jpg" width="270">
+  <img src="screenshots/aa-manage-tags.jpg"   width="270">
+</p>
+
 ## Features
 
 - **Live view** — RTSP preview (front/rear, via libVLC), start/stop recording, and take a
@@ -22,9 +43,11 @@ Built with Kotlin + Jetpack Compose (Material 3), Hilt, libVLC (RTSP live view),
   the **Android Auto** car screen — tap a preset tag to save a moment while driving (tags are
   managed in Settings; moments can also be created on the phone without AA).
 - **Settings** — Wi-Fi SSID/password; recording (resolution, WDR/HDR, loop interval, G-sensor,
-  volume, date/time stamp, light frequency); record-audio toggle and "mute voice & beep";
-  **SD storage** (free space + estimated recording time left); save-to-camera; format SD; and
-  an experimental panel to probe undocumented firmware commands.
+  volume, date/time stamp, light frequency) — the available options and current values are read
+  **live from the camera** (cmd 3030 / 3014), so they reflect what your specific model supports
+  rather than a hardcoded list; record-audio toggle and "mute voice & beep"; **SD storage**
+  (free space + estimated recording time left); save-to-camera; format SD; and an experimental
+  panel to probe undocumented firmware commands.
 - **Offline / Online modes** — Online connects to the dashcam Wi-Fi for live control; Offline
   works without the camera, browsing already-downloaded clips and managing moments/tags.
 
