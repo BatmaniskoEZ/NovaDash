@@ -38,6 +38,12 @@ button and emergency slots are small, so their audio was relocated into bigger, 
 slots (id 14 = format-first-use, id 26 = format-reminder). Boot jingles (id 2/20) were left
 original — they never actually trigger at power-on on this unit; the real power-on sound is id 23.
 
+## Demo
+
+Custom power-on and button-press sounds in action (~12 s):
+
+<!-- On GitHub: Edit this file (pencil) and drag demo.mp4 into the editor right on the line below. -->
+
 ---
 
 ## Access to the camera (from a PC on the dashcam Wi-Fi)
