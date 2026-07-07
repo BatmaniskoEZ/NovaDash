@@ -42,7 +42,9 @@ original — they never actually trigger at power-on on this unit; the real powe
 
 Custom power-on and button-press sounds in action (~12 s):
 
-<!-- On GitHub: Edit this file (pencil) and drag demo.mp4 into the editor right on the line below. -->
+
+https://github.com/user-attachments/assets/d55c5564-8afc-4fb2-92ad-4c3c8fa85327
+
 
 ---
 
