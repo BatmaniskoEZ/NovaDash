@@ -36,9 +36,15 @@
         <service
             android:name=".car.NovaCarAppService"
             android:exported="true">
+            <!-- IOT is the correct category: our car screens use the standard templates
+                 (List/Grid/Pane), which IOT apps are built on. POI is for map-based apps —
+                 it expects map templates and the androidx.car.app.MAP_TEMPLATES permission,
+                 neither of which we use — and sideloaded POI/nav apps also have known
+                 launcher-visibility issues on real head units (they still render on DHU).
+                 Home Assistant (also a List/Grid control app) uses IOT for the same reason. -->
             <intent-filter>
                 <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.POI" />
+                <category android:name="androidx.car.app.category.IOT" />
             </intent-filter>
         </service>
 
