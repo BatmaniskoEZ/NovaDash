@@ -10,8 +10,9 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
-    <!-- Android Auto (Car App Library). Not present on phones; host provides the templates. -->
-    <uses-feature android:name="android.hardware.type.automotive" android:required="false" />
+    <!-- Android Auto (Car App Library). Not present on phones; host provides the templates.
+         Do NOT add android.hardware.type.automotive here: that marks an Automotive OS app,
+         and Play rejects it combined with the com.google.android.gms.car.application metadata. -->
     <uses-feature android:name="android.software.car.templates_host" android:required="false" />
 
     <application
