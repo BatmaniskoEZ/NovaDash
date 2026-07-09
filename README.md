@@ -67,8 +67,9 @@ against a real camera; see `app/src/main/java/com/novadash/net/NovaCommands.kt`.
 For the **Android Auto** integration to work in a real car, install NovaDash **from Google
 Play** (currently distributed via the internal-testing track) — Android Auto only shows car
 apps that were installed from the Play Store. A sideloaded/debug build still works fine on the
-phone and on the Desktop Head Unit (DHU) emulator, but on a real head unit it only appears
-after enabling **Unknown sources** in the Android Auto developer settings.
+phone and on the Desktop Head Unit (DHU) emulator, but don't count on it in a real car: the
+**Unknown sources** toggle in Android Auto's developer settings is meant to allow non-Play
+apps, yet sideloaded car apps often still fail to appear on the head-unit launcher.
 
 ## Build
 
