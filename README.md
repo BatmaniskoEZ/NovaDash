@@ -62,6 +62,14 @@ The camera exposes three local transports on its Wi-Fi AP:
 Command IDs and response schemas were worked out by watching the stock app's Wi-Fi traffic
 against a real camera; see `app/src/main/java/com/novadash/net/NovaCommands.kt`.
 
+## Install
+
+For the **Android Auto** integration to work in a real car, install NovaDash **from Google
+Play** (currently distributed via the internal-testing track) — Android Auto only shows car
+apps that were installed from the Play Store. A sideloaded/debug build still works fine on the
+phone and on the Desktop Head Unit (DHU) emulator, but on a real head unit it only appears
+after enabling **Unknown sources** in the Android Auto developer settings.
+
 ## Build
 
 ```sh
