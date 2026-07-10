@@ -58,19 +58,30 @@ class MomentsViewModel @Inject constructor(
     fun updateTag(id: String, tag: String) = momentsRepo.updateTag(id, tag)
     fun delete(id: String) = momentsRepo.delete(id)
 
-    /** The clip that was recording at the moment (latest group started at/before it). */
+    /**
+     * The clip that was recording at the moment (latest group started at/before it). Clips
+     * recorded before the app started syncing the camera clock on connect can be named a whole
+     * DST hour off, so each offset in [CLOCK_OFFSETS_MS] is tried and the candidate that started
+     * closest to the (adjusted) moment wins.
+     */
     fun matchingGroup(moment: SavedMoment): RecordingGroup? =
-        _groups.value
-            .filter { it.startEpochMillis in 1 until moment.epochMillis + CLIP_TOLERANCE_MS }
-            .maxByOrNull { it.startEpochMillis }
-            ?.takeIf { moment.epochMillis - it.startEpochMillis < MAX_MATCH_MS }
+        CLOCK_OFFSETS_MS.mapNotNull { off ->
+            val m = moment.epochMillis + off
+            _groups.value
+                .filter { it.startEpochMillis in 1 until m + CLIP_TOLERANCE_MS }
+                .maxByOrNull { it.startEpochMillis }
+                ?.takeIf { m - it.startEpochMillis < MAX_MATCH_MS }
+                ?.let { it to kotlin.math.abs(m - it.startEpochMillis) }
+        }.minByOrNull { it.second }?.first
 
-    /** Recordings whose start falls within [-backMin, +fwdMin] of the moment. */
-    fun groupsInWindow(moment: SavedMoment, backMin: Int, fwdMin: Int): List<RecordingGroup> {
-        val from = moment.epochMillis - backMin * 60_000L
-        val to = moment.epochMillis + fwdMin * 60_000L
-        return _groups.value.filter { it.startEpochMillis in from..to }.sortedBy { it.startEpochMillis }
-    }
+    /** Recordings whose start falls within [-backMin, +fwdMin] of the moment, at any of the
+     *  tried camera-clock offsets (so hour-misnamed clips still show up in the picker). */
+    fun groupsInWindow(moment: SavedMoment, backMin: Int, fwdMin: Int): List<RecordingGroup> =
+        CLOCK_OFFSETS_MS.flatMap { off ->
+            val from = moment.epochMillis + off - backMin * 60_000L
+            val to = moment.epochMillis + off + fwdMin * 60_000L
+            _groups.value.filter { it.startEpochMillis in from..to }
+        }.distinctBy { it.key }.sortedBy { it.startEpochMillis }
 
     fun download(groups: List<RecordingGroup>, choice: CameraChoice) {
         groups.forEach { g ->
@@ -86,5 +97,9 @@ class MomentsViewModel @Inject constructor(
     private companion object {
         const val CLIP_TOLERANCE_MS = 70_000L // clips are ~60s; small slack past the start
         const val MAX_MATCH_MS = 10 * 60_000L // don't "match" a moment to a clip >10 min older
+        /** Camera-clock errors to try: exact, then a DST hour either way (this camera has no
+         *  GPS module, so misnamed clips can't be corrected from the footage — see
+         *  GpsClockCorrector — and a whole-hour clock error is by far the common case). */
+        val CLOCK_OFFSETS_MS = listOf(0L, -3_600_000L, 3_600_000L)
     }
 }
