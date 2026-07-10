@@ -56,9 +56,12 @@ fun HomeScreen(viewModel: HomeViewModel = androidx.hilt.navigation.compose.hiltV
     // Set when a moment asks Files to scroll to a specific clip.
     var pendingScrollKey by remember { mutableStateOf<String?>(null) }
 
-    // Files/Settings need recording paused; Live/Map resume it (matches the stock app).
+    // Files/Settings/Moments need recording paused (they list the camera album, which this
+    // firmware only serves reliably — and safely — with recording stopped); Live resumes it.
     androidx.compose.runtime.LaunchedEffect(tab) {
-        viewModel.setBrowsing(tab == HubTab.FILES || tab == HubTab.SETTINGS)
+        viewModel.setBrowsing(
+            tab == HubTab.FILES || tab == HubTab.SETTINGS || tab == HubTab.MOMENTS,
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

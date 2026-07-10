@@ -3,7 +3,6 @@ package com.novadash.data
 import android.content.Context
 import android.net.Uri
 import com.novadash.gps.NmeaParser
-import com.novadash.net.NovaApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -27,10 +26,15 @@ import javax.inject.Singleton
  * Clips recorded in one go share the same clock error, so we don't probe every clip: the list
  * is split into recording sessions (gap > [SESSION_GAP_MS] between consecutive clips), one clip
  * per session near a moment is probed, and the measured offset is applied to the whole session.
+ *
+ * Only clips already downloaded to the phone are probed. Files are NEVER streamed from the
+ * camera here: reading file data while the camera is recording can wedge this firmware and
+ * corrupt its storage (an eMMC auto-formatted itself on boot after exactly that), and this
+ * class runs from the Moments tab with no guarantee recording is paused. Clips still on the
+ * camera keep their filename time and are handled by the ±1h offset fallback in the matcher.
  */
 @Singleton
 class GpsClockCorrector @Inject constructor(
-    private val api: NovaApi,
     @ApplicationContext private val context: Context,
 ) {
     /** Probe result per file name; empty Optional = probed, no usable GPS fix in the head. */
@@ -106,16 +110,12 @@ class GpsClockCorrector @Inject constructor(
     }
 
     private suspend fun readFirstFixEpoch(file: MediaFile): Long? = readMutex.withLock {
+        val url = file.downloadUrl
+        // Local files only — see the class doc; never stream from the camera.
+        if (!url.startsWith("content://") && !url.startsWith("file://")) return null
         withContext(Dispatchers.IO) {
-            val url = file.downloadUrl
-            val stream: InputStream =
-                if (url.startsWith("content://") || url.startsWith("file://")) {
-                    context.contentResolver.openInputStream(Uri.parse(url))
-                        ?: return@withContext null
-                } else {
-                    api.download(url).byteStream() // closed early below; aborts the transfer
-                }
-            stream.use { scanForFixEpoch(it) }
+            context.contentResolver.openInputStream(Uri.parse(url))
+                ?.use { scanForFixEpoch(it) }
         }
     }
 
