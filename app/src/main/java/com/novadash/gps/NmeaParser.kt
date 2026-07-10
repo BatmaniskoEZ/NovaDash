@@ -5,6 +5,9 @@ data class TrackPoint(
     val latitude: Double,
     val longitude: Double,
     val speedKmh: Double?,
+    /** UTC instant of the fix (RMC time+date fields) — satellite time, immune to the camera's
+     *  clock being wrong. Null when the sentence carries no date. */
+    val epochMillis: Long? = null,
 )
 
 /**
@@ -29,7 +32,20 @@ object NmeaParser {
         val lat = coordinate(f[3], f[4]) ?: return null
         val lon = coordinate(f[5], f[6]) ?: return null
         val speedKmh = f[7].toDoubleOrNull()?.let { it * 1.852 } // knots -> km/h
-        return TrackPoint(lat, lon, speedKmh)
+        return TrackPoint(lat, lon, speedKmh, epochMillis = fixEpoch(f))
+    }
+
+    /** UTC epoch from RMC time (field 1, `hhmmss[.sss]`) + date (field 9, `ddmmyy`). */
+    private fun fixEpoch(f: List<String>): Long? {
+        val time = f.getOrNull(1)?.substringBefore('.')
+            ?.takeIf { it.length == 6 && it.all(Char::isDigit) } ?: return null
+        val date = f.getOrNull(9)
+            ?.takeIf { it.length == 6 && it.all(Char::isDigit) } ?: return null
+        return runCatching {
+            java.text.SimpleDateFormat("ddMMyyHHmmss", java.util.Locale.US)
+                .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                .parse(date + time)?.time
+        }.getOrNull()
     }
 
     /** NMEA coordinates are ddmm.mmmm / dddmm.mmmm; convert to signed decimal degrees. */

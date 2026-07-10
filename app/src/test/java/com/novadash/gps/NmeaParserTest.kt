@@ -18,6 +18,25 @@ class NmeaParserTest {
     }
 
     @Test
+    fun decodesUtcFixTime() {
+        // 12:35:19 UTC on 23 Mar 1994 (RMC date field is ddmmyy).
+        val nmea = "\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A"
+        assertEquals(764426119000L, NmeaParser.parse(nmea)[0].epochMillis)
+
+        // Fractional seconds in the time field are ignored, not fatal.
+        val fractional = "\$GNRMC,080102.50,A,4807.038,N,01131.000,E,1.0,,090726,,*00"
+        assertEquals(1783584062000L, NmeaParser.parse(fractional)[0].epochMillis)
+    }
+
+    @Test
+    fun missingDateYieldsNullTimeButValidPoint() {
+        val noDate = "\$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4"
+        val points = NmeaParser.parse(noDate)
+        assertEquals(1, points.size)
+        assertEquals(null, points[0].epochMillis)
+    }
+
+    @Test
     fun skipsVoidFixesAndHandlesSouthWest() {
         val text = buildString {
             append("noise\$GPRMC,000000,V,0000.000,N,00000.000,E,,,010100,,*00\n")

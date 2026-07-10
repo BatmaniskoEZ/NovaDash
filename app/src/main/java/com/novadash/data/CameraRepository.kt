@@ -88,6 +88,16 @@ class CameraRepository @Inject constructor(
             is NovaResult.Ok -> r.value.payload
             is NovaResult.Err -> null
         }
+
+        // Push the phone's clock to the camera (the stock app does the same on connect). The
+        // camera's RTC drifts and doesn't follow DST, and clip filenames come from its clock,
+        // so an unsynced camera breaks moment-to-clip matching. Best-effort; failures ignored.
+        val now = java.util.Date()
+        fun fmt(pattern: String) =
+            java.text.SimpleDateFormat(pattern, java.util.Locale.US).format(now)
+        client.command(NovaCommands.SET_DATE, str = fmt("yyyy-M-d"))
+        client.command(NovaCommands.SET_TIME, str = fmt("HH:mm:ss"))
+
         _connection.value = CameraConnection.Connected(firmware)
 
         // Read the real recording state (cmd 3014 -> cmd 2001 value) so the UI matches the

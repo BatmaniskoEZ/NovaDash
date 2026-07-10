@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.novadash.data.AppMode
 import com.novadash.data.CameraChoice
 import com.novadash.data.FileRepository
+import com.novadash.data.GpsClockCorrector
 import com.novadash.data.MomentsRepository
 import com.novadash.data.RecordingGroup
 import com.novadash.data.SavedMoment
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class MomentsViewModel @Inject constructor(
     private val momentsRepo: MomentsRepository,
     private val files: FileRepository,
+    private val clockCorrector: GpsClockCorrector,
     session: SessionState,
 ) : ViewModel() {
 
@@ -37,11 +39,15 @@ class MomentsViewModel @Inject constructor(
 
     fun loadGroups() {
         viewModelScope.launch {
-            _groups.value = if (offline) files.downloadedGroups()
+            val loaded = if (offline) files.downloadedGroups()
             else when (val r = files.list()) {
                 is NovaResult.Ok -> RecordingGroup.pair(r.value)
                 is NovaResult.Err -> emptyList()
             }
+            _groups.value = loaded
+            // Replace filename times with GPS-derived ones where the camera clock was wrong
+            // (probes read only clip heads; groups re-emit once corrected).
+            _groups.value = clockCorrector.correct(loaded, moments.value.map { it.epochMillis })
         }
     }
 

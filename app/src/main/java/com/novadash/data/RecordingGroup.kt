@@ -8,6 +8,9 @@ package com.novadash.data
 data class RecordingGroup(
     val front: MediaFile?,
     val rear: MediaFile?,
+    /** GPS-derived true start (see GpsClockCorrector); overrides the filename time, which
+     *  carries the camera's possibly-wrong clock. */
+    val startOverrideMillis: Long? = null,
 ) {
     /** The file to show/play by default (front if present, otherwise the rear-only clip). */
     val primary: MediaFile get() = front ?: rear!!
@@ -16,7 +19,7 @@ data class RecordingGroup(
     val key: String get() = primary.cameraPath
     val day: String get() = primary.day
     val isEvent: Boolean get() = primary.isEvent
-    val startEpochMillis: Long get() = primary.startEpochMillis
+    val startEpochMillis: Long get() = startOverrideMillis ?: primary.startEpochMillis
 
     companion object {
         /**

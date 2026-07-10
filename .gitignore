@@ -10,3 +10,4 @@ keystore.properties
 captures/
 .externalNativeBuild/
 .cxx/
+.DS_Store
