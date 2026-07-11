@@ -38,6 +38,7 @@ class CameraRepository @Inject constructor(
     private val client: NovaClient,
     private val notify: NotifyClient,
     private val wifiGate: WifiGate,
+    private val clockSync: ClockSyncStore,
     private val appScope: CoroutineScope,
 ) {
     private val _connection = MutableStateFlow<CameraConnection>(CameraConnection.Disconnected)
@@ -95,8 +96,11 @@ class CameraRepository @Inject constructor(
         val now = java.util.Date()
         fun fmt(pattern: String) =
             java.text.SimpleDateFormat(pattern, java.util.Locale.US).format(now)
-        client.command(NovaCommands.SET_DATE, str = fmt("yyyy-M-d"))
-        client.command(NovaCommands.SET_TIME, str = fmt("HH:mm:ss"))
+        val dateOk = client.command(NovaCommands.SET_DATE, str = fmt("yyyy-M-d")) is NovaResult.Ok
+        val timeOk = client.command(NovaCommands.SET_TIME, str = fmt("HH:mm:ss")) is NovaResult.Ok
+        // Clips named after this instant are provably correctly named (moment matching
+        // restricts the ±1h fallback to older clips).
+        if (dateOk && timeOk) clockSync.markSynced(now.time)
 
         _connection.value = CameraConnection.Connected(firmware)
 

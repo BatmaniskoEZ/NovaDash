@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novadash.data.AppMode
 import com.novadash.data.CameraChoice
+import com.novadash.data.ClockSyncStore
 import com.novadash.data.FileRepository
 import com.novadash.data.GpsClockCorrector
 import com.novadash.data.MomentsRepository
@@ -23,6 +24,7 @@ class MomentsViewModel @Inject constructor(
     private val momentsRepo: MomentsRepository,
     private val files: FileRepository,
     private val clockCorrector: GpsClockCorrector,
+    private val clockSync: ClockSyncStore,
     session: SessionState,
 ) : ViewModel() {
 
@@ -59,28 +61,39 @@ class MomentsViewModel @Inject constructor(
     fun delete(id: String) = momentsRepo.delete(id)
 
     /**
-     * The clip that was recording at the moment (latest group started at/before it). Clips
-     * recorded before the app started syncing the camera clock on connect can be named a whole
-     * DST hour off, so each offset in [CLOCK_OFFSETS_MS] is tried and the candidate that started
-     * closest to the (adjusted) moment wins.
+     * Whether a clip may match at a shifted (±1h) offset: only if it was named before the
+     * camera clock was last synced to phone time — anything named after the sync is provably
+     * correctly named and must only match exactly. Before any sync (0) everything is eligible.
+     */
+    private fun RecordingGroup.eligibleShifted(): Boolean {
+        val lastSync = clockSync.lastSyncMillis
+        return lastSync == 0L || startEpochMillis < lastSync
+    }
+
+    /**
+     * The clip that was recording at the moment (latest group started at/before it). The exact
+     * clock is tried first and wins outright; the ±1h offsets in [CLOCK_OFFSETS_MS] only rescue
+     * clips recorded before the last clock sync, whose names can be a DST hour off.
      */
     fun matchingGroup(moment: SavedMoment): RecordingGroup? =
-        CLOCK_OFFSETS_MS.mapNotNull { off ->
+        CLOCK_OFFSETS_MS.firstNotNullOfOrNull { off ->
             val m = moment.epochMillis + off
             _groups.value
+                .filter { off == 0L || it.eligibleShifted() }
                 .filter { it.startEpochMillis in 1 until m + CLIP_TOLERANCE_MS }
                 .maxByOrNull { it.startEpochMillis }
                 ?.takeIf { m - it.startEpochMillis < MAX_MATCH_MS }
-                ?.let { it to kotlin.math.abs(m - it.startEpochMillis) }
-        }.minByOrNull { it.second }?.first
+        }
 
-    /** Recordings whose start falls within [-backMin, +fwdMin] of the moment, at any of the
-     *  tried camera-clock offsets (so hour-misnamed clips still show up in the picker). */
+    /** Recordings whose start falls within [-backMin, +fwdMin] of the moment — at the exact
+     *  clock, plus the ±1h offsets for pre-sync clips (so hour-misnamed ones still show up). */
     fun groupsInWindow(moment: SavedMoment, backMin: Int, fwdMin: Int): List<RecordingGroup> =
         CLOCK_OFFSETS_MS.flatMap { off ->
             val from = moment.epochMillis + off - backMin * 60_000L
             val to = moment.epochMillis + off + fwdMin * 60_000L
-            _groups.value.filter { it.startEpochMillis in from..to }
+            _groups.value
+                .filter { off == 0L || it.eligibleShifted() }
+                .filter { it.startEpochMillis in from..to }
         }.distinctBy { it.key }.sortedBy { it.startEpochMillis }
 
     fun download(groups: List<RecordingGroup>, choice: CameraChoice) {
@@ -97,9 +110,10 @@ class MomentsViewModel @Inject constructor(
     private companion object {
         const val CLIP_TOLERANCE_MS = 70_000L // clips are ~60s; small slack past the start
         const val MAX_MATCH_MS = 10 * 60_000L // don't "match" a moment to a clip >10 min older
-        /** Camera-clock errors to try: exact, then a DST hour either way (this camera has no
-         *  GPS module, so misnamed clips can't be corrected from the footage — see
-         *  GpsClockCorrector — and a whole-hour clock error is by far the common case). */
+        /** Camera-clock errors to try, in priority order: exact first, then a DST hour either
+         *  way (this camera has no GPS module, so misnamed clips can't be corrected from the
+         *  footage — see GpsClockCorrector — and a whole-hour clock error is the common case).
+         *  The first offset that produces a match wins. */
         val CLOCK_OFFSETS_MS = listOf(0L, -3_600_000L, 3_600_000L)
     }
 }
