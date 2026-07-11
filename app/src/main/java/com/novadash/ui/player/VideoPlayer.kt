@@ -38,7 +38,12 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, keepPosition: Boolea
     }
 
     AndroidView(
-        factory = { ctx -> PlayerView(ctx).apply { this.player = player } },
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                this.player = player
+                keepScreenOn = true // don't dim/lock mid-playback
+            }
+        },
         update = { it.player = player },
         modifier = modifier.fillMaxSize(),
     )

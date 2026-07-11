@@ -8,6 +8,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:keepScreenOn="true"
+    app:bar_height="6dp"
     app:ad_marker_width="10dp"
     app:ad_marker_color="#FF00B0FF"
     app:played_ad_marker_color="#B300B0FF" />
