@@ -56,6 +56,28 @@ class MomentMatcherTest {
     }
 
     @Test
+    fun containingClipBeatsOneStartingJustAfter() {
+        // Real case: camera 1h behind, clips named 18:07 and 18:08, moment at 19:07:11.
+        // At -1h the adjusted moment (18:07:11) sits 11s into the 18:07 clip; the 18:08 clip
+        // starting 49s later must not win via the start-slop tolerance.
+        lastSync = epoch("20260711200000") // both clips pre-sync
+        val containing = clip("20260711180700", 30)
+        val justAfter = clip("20260711180800", 32)
+        val moment = epoch("20260711190711")
+
+        assertEquals(containing, matcher.matchingGroup(listOf(containing, justAfter), moment))
+    }
+
+    @Test
+    fun startSlopStillMatchesWhenNoContainingClip() {
+        lastSync = 0L
+        val justAfter = clip("20260711180800", 32) // starts 49s after the adjusted moment
+        val moment = epoch("20260711190711")
+
+        assertEquals(justAfter, matcher.matchingGroup(listOf(justAfter), moment))
+    }
+
+    @Test
     fun momentPositionsUseExactAndShiftedOffsets() {
         val clip = clip("20260711100000", 1)
         val duration = 60_000L

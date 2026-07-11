@@ -25,8 +25,8 @@ android {
         applicationId = "com.novadash"
         minSdk = 24
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.3.0"
+        versionCode = 9
+        versionName = "0.3.1"
         // The camera only speaks to arm devices in practice; keep both ABIs for the
         // optional bundled ijkplayer .so fallback (see media/RtspPlayer.kt).
         ndk {

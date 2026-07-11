@@ -30,11 +30,20 @@ class MomentMatcher internal constructor(
     fun matchingGroup(groups: List<RecordingGroup>, momentEpochMillis: Long): RecordingGroup? =
         CLOCK_OFFSETS_MS.firstNotNullOfOrNull { off ->
             val m = momentEpochMillis + off
-            groups
+            val eligible = groups
                 .filter { off == 0L || it.eligibleShifted() }
-                .filter { it.startEpochMillis in 1 until m + CLIP_TOLERANCE_MS }
+                .filter { it.startEpochMillis > 0 }
+            // The clip that contains the moment: latest start at/before it. Only when none
+            // exists, accept one that started just after (small camera-clock slop) — the slack
+            // must never outrank a containing clip, or a moment 11s into clip A gets matched
+            // to clip B starting 49s later.
+            eligible
+                .filter { it.startEpochMillis <= m }
                 .maxByOrNull { it.startEpochMillis }
                 ?.takeIf { m - it.startEpochMillis < MAX_MATCH_MS }
+                ?: eligible
+                    .filter { it.startEpochMillis in (m + 1)..(m + CLIP_TOLERANCE_MS) }
+                    .minByOrNull { it.startEpochMillis }
         }
 
     /** Recordings whose start falls within [-backMin, +fwdMin] of the moment — at the exact
