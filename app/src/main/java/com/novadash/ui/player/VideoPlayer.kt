@@ -47,13 +47,15 @@ fun VideoPlayer(uri: String, modifier: Modifier = Modifier, keepPosition: Boolea
 /**
  * Renders an externally-owned ExoPlayer (so the caller can read position, seek, etc.).
  * [onControlsVisible] reports when the transport controls are shown, so overlays can move
- * out of their way.
+ * out of their way. [momentMarkersMs] are drawn as bookmark ticks on the seekbar (via the
+ * time bar's extra-ad-marker mechanism — the standard way to mark positions on DefaultTimeBar).
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun ExoSurface(
     player: ExoPlayer,
     modifier: Modifier = Modifier,
+    momentMarkersMs: LongArray = LongArray(0),
     onControlsVisible: (Boolean) -> Unit = {},
 ) {
     AndroidView(
@@ -67,7 +69,10 @@ fun ExoSurface(
                 )
             }
         },
-        update = { it.player = player },
+        update = {
+            it.player = player
+            it.setExtraAdGroupMarkers(momentMarkersMs, BooleanArray(momentMarkersMs.size))
+        },
         modifier = modifier.fillMaxSize(),
     )
 }

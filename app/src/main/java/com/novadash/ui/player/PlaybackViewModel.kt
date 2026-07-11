@@ -7,7 +7,10 @@ import com.novadash.data.DownloadState
 import com.novadash.data.FileRepository
 import com.novadash.data.MarkersRepository
 import com.novadash.data.MediaFile
+import com.novadash.data.MomentMatcher
+import com.novadash.data.MomentsRepository
 import com.novadash.data.RecordingGroup
+import com.novadash.data.SavedMoment
 import com.novadash.data.Segment
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +22,17 @@ import javax.inject.Inject
 class PlaybackViewModel @Inject constructor(
     private val files: FileRepository,
     private val markersRepo: MarkersRepository,
+    private val momentsRepo: MomentsRepository,
+    private val matcher: MomentMatcher,
 ) : ViewModel() {
 
     val downloads: StateFlow<Map<String, DownloadState>> = files.downloads
     val markers: StateFlow<Map<String, List<Segment>>> = markersRepo.markers
+    val moments: StateFlow<List<SavedMoment>> = momentsRepo.moments
+
+    /** Timeline-marker positions (ms into the clip) of saved moments inside [group]. */
+    fun momentMarkers(group: RecordingGroup, durationMs: Long): LongArray =
+        matcher.momentPositionsInClip(group, moments.value.map { it.epochMillis }, durationMs)
 
     /** Enqueue one or more files (the repository downloads them one at a time). */
     fun download(vararg targets: MediaFile) = targets.forEach { files.download(it) }

@@ -96,6 +96,25 @@ fun PlaybackScreen(
     // Screen owns the player so the marker buttons can read the current position and seek.
     val context = androidx.compose.ui.platform.LocalContext.current
     val player = remember { androidx.media3.exoplayer.ExoPlayer.Builder(context).build().apply { playWhenReady = true } }
+
+    // Clip duration becomes known once the player is READY; needed to place moment markers.
+    var durationMs by remember(group) { mutableStateOf(0L) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == androidx.media3.common.Player.STATE_READY) {
+                    durationMs = player.duration.coerceAtLeast(0L)
+                }
+            }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    val moments by viewModel.moments.collectAsStateWithLifecycle()
+    // Bookmark ticks on the seekbar where saved moments fall inside this recording.
+    val momentMarkers = remember(group, durationMs, moments) {
+        viewModel.momentMarkers(group, durationMs)
+    }
     androidx.compose.runtime.LaunchedEffect(playUri, file.isVideo) {
         if (!file.isVideo) return@LaunchedEffect // photos are shown as an image, not played
         val resumeAt = if (keepPosition) player.currentPosition else 0L
@@ -144,6 +163,7 @@ fun PlaybackScreen(
             ExoSurface(
                 player = player,
                 modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+                momentMarkersMs = momentMarkers,
                 onControlsVisible = { controlsVisible = it },
             )
         } else {
