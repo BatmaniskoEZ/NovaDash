@@ -60,7 +60,10 @@ fun ExoSurface(
 ) {
     AndroidView(
         factory = { ctx ->
-            PlayerView(ctx).apply {
+            // Inflated (not constructed) so the marker attrs in exo_surface.xml apply.
+            val view = android.view.LayoutInflater.from(ctx)
+                .inflate(com.novadash.R.layout.exo_surface, null) as PlayerView
+            view.apply {
                 this.player = player
                 setControllerVisibilityListener(
                     PlayerView.ControllerVisibilityListener { visibility ->

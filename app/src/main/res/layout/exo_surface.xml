@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Playback surface for ExoSurface. Inflated from XML (instead of constructed in code) only
+     so the time-bar attributes apply: moment markers use the ad-marker slots, and the default
+     4dp translucent-yellow ticks are near-invisible — and yellow/green hues are a bad fit for
+     red-green colorblind users. Blue is the colorblind-safe high-contrast choice. -->
+<androidx.media3.ui.PlayerView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:ad_marker_width="10dp"
+    app:ad_marker_color="#FF00B0FF"
+    app:played_ad_marker_color="#B300B0FF" />
