@@ -99,24 +99,6 @@ both using the root telnet/FTP access already documented in `firmware-sound-mod/
 2. **Patch `cardv`** to route a spare Wi-Fi command to the lock path, the same way the custom
    sounds were patched in. Invasive, and it has to be redone per firmware build.
 
-## Note: two command ids look swapped in NovaDash
-
-`NovaCommands.kt` has `FREQUENCY = 6788` and `DATETIME_STAMP = 6809`. The firmware says the
-opposite - each handler names itself:
-
-| cmd | handler | firmware name |
-|---|---|---|
-| 6788 | `0x0003bdc4` | `WiFiCmd_OnExeSetMovieDateImprint` |
-| 6809 | `0x0003b134` | `WiFiCmd_OnExeSetFrequence` |
-
-(6807 -> `WiFiCmd_OnExeSetVolumn` agrees with the app, so the table reading is sound.)
-
-**Confirmed in use, not just on paper.** With the old mapping, picking 50 Hz sent `6788 par=0`,
-which the camera read as "date imprint off" - and the date stamps disappeared from the clips.
-The inverse held too: switching the date stamp on sent `6809 par=1`, quietly selecting 60 Hz,
-so a camera whose stamp was ever toggled is probably sitting on 60 Hz. Fixed in NovaDash as of
-commit `1b83379`.
-
 ## Previously undocumented ids, now named
 
 | cmd | firmware name |
@@ -167,7 +149,7 @@ The `par` values don't have to be guessed or probed: the menu tables in `.data` 
 
 Note 9968 has no 0 - the shortest setting is 8 h.
 
-### The menu tables, and a third proof of the 6788/6809 swap
+### The menu tables: which command drives which setting
 
 At `v0x010458f0` sits a table of 12-byte records `{flag_id, key_string, options_table}`, where
 each options table is `{index, name}` pairs terminated by `0xffffffff`. It maps every menu key
@@ -184,9 +166,11 @@ to the `FL_*` id that the command table's 5th field also carries, which lines th
 | 172 | `TimeLapseParkingModeWorkingTime` | 9968 |
 | 17 | `PIP_VIEW` | 3028 (previously undocumented - see below) |
 
-6788 -> flag 38 -> `MOVIE_DATEIMPRINT` and 6809 -> flag 69 -> `LightSourceFrequency`: a third
-independent source agreeing that the two were swapped in the app. `LightSourceFrequency`'s
-options are `0 = 50HZ, 1 = 60HZ`, which also confirms NovaDash's existing 50/60 ordering.
+Note **6788 -> flag 38 -> `MOVIE_DATEIMPRINT`** and **6809 -> flag 69 ->
+`LightSourceFrequency`**, which is the opposite of what the published references say and of what
+capturing the stock app's traffic suggests. Each handler also names itself
+(`WiFiCmd_OnExeSetMovieDateImprint`, `WiFiCmd_OnExeSetFrequence`), so the mapping is the
+firmware's own, from two places. `LightSourceFrequency`'s options are `0 = 50HZ, 1 = 60HZ`.
 
 ### Field 5 of each table record is the UI flag id
 

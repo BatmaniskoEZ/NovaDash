@@ -119,9 +119,82 @@ What each of the 27 entries plays by default (extracted and identified by ear):
 | 12 | "emergency video" | 26 | "regular formatting reminder" |
 | 13 | "factory reset" | | |
 
+## Power button = lock the current clip
+
+A second, independent patch built by `patch_lockbtn.py`. Apply it to a pristine `cardv`, or to
+the sounds build so both patches are in one binary. **Verified on hardware.**
+
+The camera can lock a clip — the FAT read-only bit, the `ATTR` 32 -> 33 that cmd 3015 reports —
+but no Wi-Fi command reaches that code, and the dedicated lock key is dead while a phone is
+linked. Meanwhile the screen button does nothing useful once "screen off after boot" is set. So
+it gets repurposed.
+
+### Where it goes
+
+The screen button does **not** go through the key table `xSysMan_NormalKeyCB` uses for other
+keys — patching that table changes nothing at all, which cost one flash to discover. Its branch
+is self-contained:
+
+```
+0x1e284  UI_GetData(67)                 ; "key sound" flag
+0x1e290  if 1 -> 0x1e44c: UISound_Play, then branch back to
+0x1e294  SysGetLCDStatus() -> invert -> SysSetLCDStatus()     <-- the screen toggle
+0x1e2a8  b 0x1e0f8                      ; return; no event is ever posted
+```
+
+Both flag-67 branches converge on `0x1e294`, so that is the hook:
+
+```
+0x1e294:  bl 0x3ac3c          (was SysGetLCDStatus/invert/SysSetLCDStatus)
+0x1e298:  b  0x1e0f8
+
+stub at 0x3ac3c, over the unreachable WiFiCmd_OnExeSetMovieTimelapse:
+  movw r0,#0x0116 / movt r0,#0x1106     ; event 0x11060116
+  movw r2,#0x0401 / movt r2,#0x1106     ; param 0x11060401
+  mov  r1,#1
+  b    Ux_PostEvent                     ; tail call - returns to 0x1e298
+```
+
+That is the same event and parameter the firmware's own "Custom1 Key" simulator (`0x0001b0a8`)
+posts, and it ends in `UIFlowWndMovie_OnCustom1` -> `iamoviemulti_fm_set_ro_file`. 29 bytes
+change, in those two places only; the script asserts the original bytes at both sites first and
+then checks nothing else moved.
+
+### What you get
+
+- **Short press while recording:** the key sound plays, then the clip is locked and filed under
+  `\ARPHA\Event` with `ATTR 33`, and the camera says "current video locked" (sound id 11).
+- **Long press still powers the camera off** — it is not on this code path.
+- **The short press no longer toggles the screen.** That is the trade.
+
+Boot is untouched — the patched code only runs on a key press — so a mistake here cannot stop
+the camera booting. The failure mode is a misbehaving button, recoverable by rolling back.
+
+### Install
+
+```sh
+python patch_lockbtn.py --base cardv.final     # or cardv.bin for a pristine base
+# on the PC
+curl -u root: -T cardv.lockbtn ftp://192.168.1.254/cardv.lockbtn
+# on the camera (telnet, root, no password) — make the backup first if you haven't
+cp /usr/bin/cardv /mnt/sd/cardv.orig.bak
+rm /usr/bin/cardv && cp /mnt/sd/cardv.lockbtn /usr/bin/cardv && chmod 755 /usr/bin/cardv
+md5sum /usr/bin/cardv          # compare with what the script printed
+sync && reboot
+```
+
+Test the long press **before** relying on the camera, and remember the Wi-Fi comes up off after
+every power cycle.
+
+Rollback: `cp /mnt/sd/cardv.orig.bak /usr/bin/cardv && sync && reboot`.
+
+The Wi-Fi command reference that explains why locking has no command of its own is in
+[`firmware-wifi-commands.md`](../firmware-wifi-commands.md).
+
 ## Files here
-`camsh.py` (telnet driver) · `patch_final.py` (patch builder) · `patch_all.py`/`patch3.py`
-(variants) · `findsr.py` `table.py` `extract.py` (RE tools).
+`camsh.py` (telnet driver) · `patch_final.py` (sound patch builder) · `patch_lockbtn.py`
+(screen button = lock clip) · `patch_all.py`/`patch3.py` (variants) · `findsr.py` `table.py`
+`extract.py` (RE tools).
 
 Not included (git-ignored, per copyright / size): `cardv.bin` / `cardv.final` (proprietary
 camera firmware) and `*.raw` / `*.wav` (audio clips). Pull `cardv` from your own camera and
